@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interaktives Gesamt-Quiz: Einführung Knochen</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-bg: #dcfce7;
+    --success-border: #22c55e;
+    --success-text: #15803d;
+    --error-bg: #fee2e2;
+    --error-border: #ef4444;
+    --error-text: #b91c1c;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
+  .container { width: 100%; max-width: 760px; background: var(--card); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 24px 28px; border: 1px solid var(--border); }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .title { font-size: 1.25rem; font-weight: 700; margin: 0; }
+  .badge { background: #eff6ff; color: var(--primary); padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+  .progress-wrap { width: 100%; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 20px; }
+  .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+  .category { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .type-tag { font-size: 0.78rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; background: #f1f5f9; color: #475569; }
+  .type-tag.multi { background: #fef3c7; color: #b45309; }
+  .question { font-size: 1.15rem; font-weight: 600; line-height: 1.45; margin-bottom: 18px; }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    text-align: left; background: #fff; border: 2px solid var(--border); border-radius: 12px;
+    padding: 13px 16px; font-size: 0.97rem; color: var(--text); cursor: pointer;
+    transition: all 0.15s ease; display: flex; align-items: center; gap: 12px;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--primary); background: #f8faff; }
+  .option-btn.selected { border-color: var(--primary); background: #eff6ff; }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct { background: var(--success-bg); border-color: var(--success-border); color: var(--success-text); font-weight: 600; }
+  .option-btn.wrong { background: var(--error-bg); border-color: var(--error-border); color: var(--error-text); }
+  .marker {
+    min-width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #334155;
+  }
+  .option-btn.selected .marker { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .option-btn.correct .marker { background: var(--success-border); border-color: var(--success-border); color: #fff; }
+  .option-btn.wrong .marker { background: var(--error-border); border-color: var(--error-border); color: #fff; }
+  .feedback {
+    margin-top: 18px; padding: 14px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.45;
+    display: none; background: #f1f5f9; border-left: 4px solid var(--primary);
+  }
+  .feedback.show { display: block; }
+  .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 11px 20px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .btn:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: #e2e8f0; color: var(--text); }
+  .btn-secondary:hover:not(:disabled) { background: #cbd5e1; }
+  .btn-check { background: #0f172a; }
+  .btn-check:hover:not(:disabled) { background: #334155; }
+  .result-box { text-align: center; padding: 20px 10px; display: none; }
+  .score-circle {
+    width: 115px; height: 115px; border-radius: 50%; background: #eff6ff; border: 4px solid var(--primary);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 16px;
+  }
+  .score-num { font-size: 1.65rem; font-weight: 800; color: var(--primary); }
+  .score-sub { font-size: 0.8rem; color: var(--muted); }
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: #fff;
+    font-size: 0.8rem; cursor: pointer; color: var(--muted); font-weight: 500;
+  }
+  .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="title">🦴 Gesamt-Quiz: Einführung Knochen</h1>
+    <span class="badge" id="scoreBadge">Punkte: 0 / 0</span>
+  </div>
+
+  <div class="filter-bar" id="filterBar"></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+
+  <div id="quizArea">
+    <div class="meta-row">
+      <span class="category" id="categoryLabel">Kategorie</span>
+      <span class="type-tag" id="typeTag">Einzelauswahl</span>
+    </div>
+    <div class="question" id="questionText">Frage lädt...</div>
+    <div class="options" id="optionsContainer"></div>
+    <div class="feedback" id="feedbackBox"></div>
+    <div class="controls">
+      <span id="counterText" style="font-size: 0.9rem; color: var(--muted);">Frage 1 von 28</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="restartQuiz(false)">Neu mischen</button>
+        <button class="btn btn-check" id="checkBtn" onclick="checkMultiAnswer()" style="display:none;" disabled>Antwort prüfen</button>
+        <button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>Weiter →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-box" id="resultBox">
+    <div class="score-circle">
+      <div class="score-num" id="finalPercent">0%</div>
+      <div class="score-sub" id="finalFraction">0 / 0</div>
+    </div>
+    <h2 id="resultTitle" style="margin: 0 0 8px;">Geschafft!</h2>
+    <p id="resultText" style="color: var(--muted); margin-bottom: 22px;"></p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-secondary" id="retryWrongBtn" onclick="restartQuiz(true)" style="display:none;">Nur falsche wiederholen</button>
+      <button class="btn" onclick="restartQuiz(false)">Komplettes Quiz neu starten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const allQuestions = [
+  // 1. Anatomische Orientierung
+  {
+    cat: "1. Orientierung",
+    multi: true,
+    q: "Welche Aussagen zu den drei Hauptebenen und -achsen des Körpers treffen zu? (Mehrfachauswahl)",
+    options: [
+      "Zur Longitudinalachse gehören superior (kranial) und inferior (kaudal).",
+      "Zur Sagittalachse gehören ventral (anterior) und dorsal (posterior).",
+      "Zur Horizontalachse gehören dexter / sinister sowie lateral / medial.",
+      "Die Medianebene ist eine spezielle Frontalebene."
+    ],
+    correct: [0, 1, 2],
+    exp: "Longitudinalachse = oben/unten (superior/inferior); Sagittalachse = vorne/hinten (ventral/dorsal); Horizontalachse = rechts/links bzw. seitwärts/zur Mitte (lateral/medial). Die Medianebene ist die mittige Sagittalebene."
+  },
+  {
+    cat: "1. Orientierung",
+    multi: true,
+    q: "Welche Kombinationen aus anatomischem Richtungsbegriff und deutscher Bedeutung sind RICHTIG? (Mehrfachauswahl)",
+    options: [
+      "proximal = zum Körper hin gelegen; distal = vom Körper entfernt gelegen",
+      "palmar / volar = zur Hohlhand hin; plantar = zur Fußsohle hin",
+      "radial = zur Elle hin; ulnar = zur Speiche hin",
+      "dorsal = zum Hand- oder Fußrücken hin"
+    ],
+    correct: [0, 1, 3],
+    exp: "Falsch ist nur radial/ulnar: radial = zur Speiche (Radius) hin, ulnar = zur Elle (Ulna) hin."
+  },
+  {
+    cat: "1. Orientierung",
+    multi: false,
+    q: "Aus welcher Perspektive werden 'dexter' (rechts) und 'sinister' (links) in der Anatomie immer angegeben?",
+    options: [
+      "Aus Sicht des Betrachters / Untersuchers",
+      "Immer aus Sicht der untersuchten Person (des Patienten)",
+      "Abhängig von der jeweiligen Körperebene",
+      "Immer von der linken Körperhälfte ausgehend"
+    ],
+    correct: [1],
+    exp: "Merke: Rechts (dexter) und links (sinister) werden immer aus Sicht der untersuchten Person angegeben."
+  },
+  {
+    cat: "1. Orientierung",
+    multi: true,
+    q: "Welche lateinischen Knochenbezeichnungen der Übersicht sind korrekt zugeordnet? (Mehrfachauswahl)",
+    options: [
+      "Clavicula = Schlüsselbein; Scapula = Schulterblatt",
+      "Humerus = Oberarmknochen; Femur = Oberschenkelknochen",
+      "Tibia = Wadenbein; Fibula = Schienbein",
+      "Sternum = Brustbein; Patella = Kniescheibe"
+    ],
+    correct: [0, 1, 3],
+    exp: "Tibia ist das Schienbein und Fibula ist das Wadenbein – alle anderen Zuordnungen stimmen."
+  },
+  {
+    cat: "1. Orientierung",
+    multi: true,
+    q: "Welche Becken- und Wirbelsäulenknochen sind korrekt benannt? (Mehrfachauswahl)",
+    options: [
+      "Os ilium = Darmbein",
+      "Os sacrum = Kreuzbein",
+      "Os pubis = Sitzbein; Os ischii = Schambein",
+      "Columna vertebralis = Wirbelsäule"
+    ],
+    correct: [0, 1, 3],
+    exp: "Os pubis ist das Schambein und Os ischii ist das Sitzbein."
+  },
+
+  // 2. Das menschliche Skelett
+  {
+    cat: "2. Skelett",
+    multi: true,
+    q: "Welche Aussagen zum menschlichen Skelett sind korrekt? (Mehrfachauswahl)",
+    options: [
+      "Der erwachsene Mensch besitzt etwa 206 Knochen.",
+      "Das Skelett macht etwa 12–15 % des Normalkörpergewichts aus.",
+      "Die Knochenmasse hängt u. a. von Alter, Geschlecht, Aktivität, Ernährung, Genetik und Hormonstatus ab.",
+      "Das Skelett bildet ganz allein (ohne Muskulatur) den aktiven Bewegungsapparat."
+    ],
+    correct: [0, 1, 2],
+    exp: "Das Skelett (ca. 206 Knochen, 12–15 % des Normalkörpergewichts) bildet erst gemeinsam mit der Muskulatur den Bewegungsapparat."
+  },
+
+  // 3. Aufbau eines Röhrenknochens
+  {
+    cat: "3. Knochenaufbau",
+    multi: true,
+    q: "Welche Strukturen eines Röhrenknochens sind richtig beschrieben? (Mehrfachauswahl)",
+    options: [
+      "Diaphyse = Knochenschaft",
+      "Epiphyse = proximales bzw. distales Gelenkende",
+      "Metaphyse = Übergangsbereich zwischen Schaft und Gelenkende",
+      "Knochenmarkhöhle = Hohlraum im Schaft, enthält vor allem rotes Mark"
+    ],
+    correct: [0, 1, 2],
+    exp: "Die Knochenmarkhöhle im Schaft enthält beim Erwachsenen vor allem gelbes Fettmark (nicht rotes Mark)."
+  },
+  {
+    cat: "3. Knochenaufbau",
+    multi: true,
+    q: "Welche Aussagen zu den Gewebeschichten des Knochens stimmen? (Mehrfachauswahl)",
+    options: [
+      "Kortikalis / Kompakta = äußere, dichte und tragende Rindenschicht",
+      "Spongiosa = inneres, trabekuläres Knochengewebe, besonders in den Gelenkenden",
+      "Periost = Knochenhaut",
+      "Hyaliner Knorpel überzieht die gesamte Diaphyse außen"
+    ],
+    correct: [0, 1, 2],
+    exp: "Hyaliner Knorpel überzieht ausschließlich die Gelenkflächen (an den Epiphysen); außen um den Schaft liegt das Periost."
+  },
+
+  // 4. Funktionen des Knochens
+  {
+    cat: "4. Funktionen",
+    multi: true,
+    q: "Welche vier Hauptfunktionen erfüllt der Knochen? (Mehrfachauswahl)",
+    options: [
+      "Stütz- und Bewegungsfunktion (Ansatz- und Hebelpunkte für Muskeln)",
+      "Schutzfunktion (z. B. Schädel für Gehirn, Brustkorb für Herz/Lunge)",
+      "Speicherfunktion (Kalzium und Phosphat)",
+      "Blutbildung (Hämatopoese im roten Knochenmark)"
+    ],
+    correct: [0, 1, 2, 3],
+    exp: "Alle vier genannten Punkte sind die zentralen Hauptfunktionen des Knochens."
+  },
+  {
+    cat: "4. Funktionen",
+    multi: true,
+    q: "Welche Fakten zur Speicherfunktion von Kalzium und Phosphat sind richtig? (Mehrfachauswahl)",
+    options: [
+      "Kalzium macht ca. 1,5–2 % der Körpermasse aus und liegt zu 99 % in Knochen und Zähnen.",
+      "Kalzium ist wichtig für Knochenfestigkeit, Muskel-/Nerventätigkeit und Blutgerinnung.",
+      "Phosphat macht ca. 1 % der Körpermasse aus und liegt zu 85 % in Knochen und Zähnen.",
+      "Phosphat dient u. a. der Energiebereitstellung (ATP), dem Knochenaufbau und als pH-Puffer."
+    ],
+    correct: [0, 1, 2, 3],
+    exp: "Alle vier Angaben entsprechen exakt den Tabellenwerten der Vorlesung."
+  },
+  {
+    cat: "4. Funktionen",
+    multi: true,
+    q: "Wo befindet sich beim Erwachsenen rotes, blutbildendes Knochenmark? (Mehrfachauswahl)",
+    options: [
+      "In Wirbelkörpern und Rippen",
+      "Im Becken und im Brustbein (Sternum)",
+      "In den proximalen Epiphysen der Röhrenknochen von Oberarm und Oberschenkel",
+      "In der Markhöhle der Diaphyse aller langen Röhrenknochen"
+    ],
+    correct: [0, 1, 2],
+    exp: "Beim Erwachsenen liegt rotes Mark v. a. in flachen/kurzen Knochen (Wirbelkörper, Rippen, Becken, Sternum) sowie in den proximalen Epiphysen von OA und OS. In den Schaft-Markhöhlen befindet sich gelbes Fettmark."
+  },
+
+  // 5. Knochentypen und -formen
+  {
+    cat: "5. Knochentypen",
+    multi: true,
+    q: "Welche Zuordnungen von Knochentyp und Beispiel sind RICHTIG? (Mehrfachauswahl)",
+    options: [
+      "Röhrenknochen: Humerus, Femur",
+      "Kurze Knochen: Handwurzelknochen",
+      "Platte Knochen: Schädeldach, Schulterblatt",
+      "Sesambeine: Patella (in Sehnen eingebettet) & Irreguläre Knochen: Wirbelkörper"
+    ],
+    correct: [0, 1, 2, 3],
+    exp: "Alle 5 Knochentypen (Röhren-, kurze, platte, irreguläre Knochen und Sesambeine) sind hier mit ihren korrekten Beispielen genannt."
+  },
+
+  // 6. Leichtbau nach Pauwels
+  {
+    cat: "6. Leichtbau (Pauwels)",
+    multi: true,
+    q: "Was kennzeichnet das Minimum-Maximum-Prinzip im Knochenbau? (Mehrfachauswahl)",
+    options: [
+      "Mit minimalem Materialeinsatz wird eine maximale Festigkeit bzw. Steifigkeit erreicht.",
+      "Knochengewebe findet sich dort, wo es mechanisch benötigt wird.",
+      "Bauprinzipien senken die Beanspruchung einzelner Strukturen und sparen Material.",
+      "Der Knochen baut überall gleichmäßig dicke Kortikalis auf, unabhängig von der Belastung."
+    ],
+    correct: [0, 1, 2],
+    exp: "Nach Pauwels wird Material gespart, indem Knochen nur entlang mechanischer Belastungslinien aufgebaut wird."
+  },
+  {
+    cat: "6. Leichtbau (Pauwels)",
+    multi: true,
+    q: "Welche Bauprinzipien gehören zum Leichtbau nach Pauwels? (Mehrfachauswahl)",
+    options: [
+      "Röhrenknochen-Prinzip: Hohler Schaft spart Gewicht, da bei Biegung/Torsion hohe Spannungen am Rand entstehen.",
+      "Angepasster Querschnittsverlauf: Der Querschnitt passt sich lokalen Spannungen an.",
+      "Schaftkrümmung: Die Knochenachse ist bereichsweise gekrümmt ('geknickt'), um Biegespannungen zu reduzieren.",
+      "Zuggurtung: Muskeln bzw. Sehnen wirken als Zuggurtung und senken Biegespannungen."
+    ],
+    correct: [0, 1, 2, 3],
+    exp: "Alle vier genannten Prinzipien (plus der spongiöse Knochen in den Epiphysen) sind die zentralen Bauprinzipien nach Pauwels."
+  },
+  {
+    cat: "6. Leichtbau (Pauwels)",
+    multi: true,
+    q: "Welche Aussagen zu Spongiosa, Trabekeln und Gelenkflächen treffen zu? (Mehrfachauswahl)",
+    options: [
+      "In Epiphysen dominieren Zug- und Druckbelastungen.",
+      "Trabekel richten sich als Zug- und Druckbündel entlang der Hauptspannungslinien aus.",
+      "Breite Epiphysen vergrößern die Gelenkfläche, weil Knorpel gegenüber Knochen weniger druckfest ist.",
+      "Für die Klausur müssen die exakten Megapascal-Zahlenwerte der Druckfestigkeit von Knorpel vs. Knochen auswendig gelernt werden."
+    ],
+    correct: [0, 1, 2],
+    exp: "Merke aus der Folie: Betont wird das Prinzip (größere Gelenkfläche schützt den weniger druckfesten Knorpel) – konkrete Zahlen sind nicht prüfungsrelevant."
+  },
+  {
+    cat: "6. Leichtbau (Pauwels)",
+    multi: true,
+    q: "Welche Aussagen zum klinischen Bezug 'CCD-Winkel' (Caput-Collum-Diaphysen-Winkel) sind richtig? (Mehrfachauswahl)",
+    options: [
+      "Coxa vara liegt bei einem CCD-Winkel < 120° vor.",
+      "Coxa valga liegt bei einem CCD-Winkel > 135° vor.",
+      "Hohe Biegespannung am Schenkelhals geht mit einer dicken Kortikalis in diesem Bereich einher.",
+      "Ein normaler CCD-Winkel liegt unter 100°."
+    ],
+    correct: [0, 1, 2],
+    exp: "Coxa vara (< 120°) und Coxa valga (> 135°) sind Fehlstellungen des Hüftgelenks; der physiologische Bereich liegt dazwischen (ca. 120°–135°)."
+  },
+
+  // 7. Knochenbildung (Ossifikation)
+  {
+    cat: "7. Ossifikation",
+    multi: true,
+    q: "Welche Aussagen zur desmalen und chondralen Ossifikation sind RICHTIG? (Mehrfachauswahl)",
+    options: [
+      "Desmale Ossifikation = direkte Verknöcherung aus Bindegewebe.",
+      "Beispiele für desmale Ossifikation sind Schlüsselbein, Gesichtsknochen und Knochen des Schädeldachs.",
+      "Chondrale Ossifikation = indirekte Verknöcherung über ein vorheriges Knorpelmodell.",
+      "Fast alle Knochen des Körpers entstehen über die desmale Ossifikation."
+    ],
+    correct: [0, 1, 2],
+    exp: "Fast alle Knochen des Körpers entstehen über die chondrale (indirekte) Ossifikation; nur wenige (Schlüsselbein, Gesichtsknochen, Schädeldach) entstehen desmal."
+  },
+  {
+    cat: "7. Ossifikation",
+    multi: true,
+    q: "Was trifft auf Epiphysenfugen und das Längenwachstum zu? (Mehrfachauswahl)",
+    options: [
+      "Epiphysenfugen sind die Längenwachstumszonen des Körpers.",
+      "Nach dem Verschluss (Synostosierung) der Epiphysenfugen ist das Längenwachstum abgeschlossen.",
+      "Das Auftreten von Knochenkernen und die Synostosierung dienen als Wachstumsindikatoren.",
+      "Epiphysenfugen bestehen im Wachstum aus straffem Bindegewebe ohne Knorpel."
+    ],
+    correct: [0, 1, 2],
+    exp: "Epiphysenfugen sind knorpelige Längenwachstumszonen; ihre Verknöcherung (Synostosierung) markiert das Ende des Längenwachstums."
+  },
+
+  // 8. Anatomische Fachbegriffe am Knochen
+  {
+    cat: "8. Fachbegriffe",
+    multi: true,
+    q: "Welche Übersetzungen lateinischer Knochenstrukturen stimmen? (Mehrfachauswahl)",
+    options: [
+      "Foramen = Loch, Öffnung",
+      "Incisura = Einsenkung",
+      "Fossa = Grube",
+      "Processus = Kopf"
+    ],
+    correct: [0, 1, 2],
+    exp: "Processus bedeutet Fortsatz / Ausläufer (z. B. Processus spinosus). Kopf heißt Caput."
+  },
+  {
+    cat: "8. Fachbegriffe",
+    multi: true,
+    q: "Welche Übersetzungen sind hier KORREKT? (Mehrfachauswahl)",
+    options: [
+      "Caput = Kopf; Collum = Hals",
+      "Tuberositas = Rauhigkeit / aufgeraute Ansatzstelle",
+      "Crista / Cristae = Knochenleiste",
+      "(Epi-)Kondylus = Knochenvorsprung"
+    ],
+    correct: [0, 1, 2, 3],
+    exp: "Alle vier Zuordnungen sind exakt richtig."
+  },
+  {
+    cat: "8. Fachbegriffe",
+    multi: true,
+    q: "Welche Aussagen zu Verbindungen und Ansatzstrukturen sind richtig? (Mehrfachauswahl)",
+    options: [
+      "Ligamentum (Band) = Verbindung Knochen – Knochen.",
+      "Tendo (Sehne) = Verbindung Muskel – Knochen.",
+      "Bei hohen Belastungen an Ansätzen finden sich spezielle Oberflächenstrukturen wie Tuberositas oder Crista.",
+      "Ligamentum verbindet immer einen Muskel direkt mit dem Periost."
+    ],
+    correct: [0, 1, 2],
+    exp: "Ligamentum = Band (Knochen–Knochen); Tendo = Sehne (Muskel–Knochen). Hohe Zugkräfte an Ansätzen führen zu Aufrauhungen (Tuberositas) oder Leisten (Crista)."
+  },
+  {
+    cat: "8. Fachbegriffe",
+    multi: false,
+    q: "Welches Beispiel aus den Vorlesungsfolien illustriert eine 'Tuberositas' an der Tibia?",
+    options: [
+      "Foramen vertebrale",
+      "Caput femoris",
+      "Tuberositas tibiae",
+      "Processus spinosus"
+    ],
+    correct: [2],
+    exp: "Auf den Abbildungen der Folie wird als Beispiel für eine Tuberositas die Tuberositas tibiae (am Schienbein) gezeigt."
+  }
+];
+
+let activeCategory = "Alle";
+let currentPool = [];
+let currentIndex = 0;
+let score = 0;
+let wrongQuestions = [];
+let answered = false;
+let selectedIndices = new Set();
+
+function initFilters() {
+  const cats = ["Alle", ...new Set(allQuestions.map(q => q.cat))];
+  const bar = document.getElementById("filterBar");
+  bar.innerHTML = "";
+  cats.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "chip" + (c === activeCategory ? " active" : "");
+    btn.textContent = c;
+    btn.onclick = () => {
+      activeCategory = c;
+      initFilters();
+      restartQuiz(false);
+    };
+    bar.appendChild(btn);
+  });
+}
+
+function shuffle(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function restartQuiz(onlyWrong) {
+  if (onlyWrong && wrongQuestions.length > 0) {
+    currentPool = shuffle(wrongQuestions);
+  } else {
+    const filtered = activeCategory === "Alle" ? allQuestions : allQuestions.filter(q => q.cat === activeCategory);
+    currentPool = shuffle(filtered);
+  }
+  currentIndex = 0;
+  score = 0;
+  wrongQuestions = [];
+  document.getElementById("quizArea").style.display = "block";
+  document.getElementById("resultBox").style.display = "none";
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  selectedIndices.clear();
+  const q = currentPool[currentIndex];
+
+  document.getElementById("categoryLabel").textContent = q.cat;
+  const typeTag = document.getElementById("typeTag");
+  if (q.multi) {
+    typeTag.textContent = "☑ Mehrfachauswahl (mehrere richtig)";
+    typeTag.className = "type-tag multi";
+  } else {
+    typeTag.textContent = "◉ Einzelauswahl (1 richtig)";
+    typeTag.className = "type-tag";
+  }
+
+  document.getElementById("questionText").textContent = q.q;
+  document.getElementById("counterText").textContent = `Frage ${currentIndex + 1} von ${currentPool.length}`;
+  document.getElementById("scoreBadge").textContent = `Punkte: ${score} / ${currentIndex}`;
+  document.getElementById("progressBar").style.width = `${(currentIndex / currentPool.length) * 100}%`;
+
+  const fb = document.getElementById("feedbackBox");
+  fb.className = "feedback";
+  fb.textContent = "";
+
+  const checkBtn = document.getElementById("checkBtn");
+  const nextBtn = document.getElementById("nextBtn");
+
+  if (q.multi) {
+    checkBtn.style.display = "inline-block";
+    checkBtn.disabled = true;
+    nextBtn.disabled = true;
+  } else {
+    checkBtn.style.display = "none";
+    nextBtn.disabled = true;
+  }
+  nextBtn.textContent = currentIndex === currentPool.length - 1 ? "Ergebnis anzeigen" : "Weiter →";
+
+  const container = document.getElementById("optionsContainer");
+  container.innerHTML = "";
+  const letters = ["A", "B", "C", "D"];
+
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn";
+    const symbol = q.multi ? "☐" : letters[idx];
+    btn.innerHTML = `<span class="marker">${symbol}</span><span>${opt}</span>`;
+    btn.onclick = () => handleOptionClick(idx, btn);
+    container.appendChild(btn);
+  });
+}
+
+function handleOptionClick(idx, btn) {
+  if (answered) return;
+  const q = currentPool[currentIndex];
+
+  if (!q.multi) {
+    selectedIndices.add(idx);
+    evaluateAnswer();
+  } else {
+    if (selectedIndices.has(idx)) {
+      selectedIndices.delete(idx);
+      btn.classList.remove("selected");
+      btn.querySelector(".marker").textContent = "☐";
+    } else {
+      selectedIndices.add(idx);
+      btn.classList.add("selected");
+      btn.querySelector(".marker").textContent = "☑";
+    }
+    document.getElementById("checkBtn").disabled = selectedIndices.size === 0;
+  }
+}
+
+function checkMultiAnswer() {
+  if (answered || selectedIndices.size === 0) return;
+  evaluateAnswer();
+}
+
+function evaluateAnswer() {
+  answered = true;
+  const q = currentPool[currentIndex];
+  const buttons = document.querySelectorAll(".option-btn");
+  buttons.forEach(b => b.disabled = true);
+  document.getElementById("checkBtn").disabled = true;
+
+  const correctSet = new Set(q.correct);
+  let isExactMatch = selectedIndices.size === correctSet.size && [...selectedIndices].every(i => correctSet.has(i));
+
+  buttons.forEach((btn, idx) => {
+    btn.classList.remove("selected");
+    const isCorrectOpt = correctSet.has(idx);
+    const isSelectedOpt = selectedIndices.has(idx);
+
+    if (isCorrectOpt) {
+      btn.classList.add("correct");
+      if (q.multi) btn.querySelector(".marker").textContent = "✓";
+    } else if (isSelectedOpt && !isCorrectOpt) {
+      btn.classList.add("wrong");
+      if (q.multi) btn.querySelector(".marker").textContent = "✕";
+    }
+  });
+
+  if (isExactMatch) {
+    score++;
+  } else {
+    wrongQuestions.push(q);
+  }
+
+  document.getElementById("scoreBadge").textContent = `Punkte: ${score} / ${currentIndex + 1}`;
+  const fb = document.getElementById("feedbackBox");
+  const statusText = isExactMatch
+    ? "✅ Vollständig richtig!"
+    : `❌ Nicht ganz (${q.correct.length} richtige Antwort${q.correct.length > 1 ? "en" : ""} waren gesucht).`;
+  fb.innerHTML = `<strong>${statusText}</strong> ${q.exp}`;
+  fb.classList.add("show");
+  document.getElementById("nextBtn").disabled = false;
+}
+
+function nextQuestion() {
+  if (currentIndex < currentPool.length - 1) {
+    currentIndex++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function showResults() {
+  document.getElementById("progressBar").style.width = "100%";
+  document.getElementById("quizArea").style.display = "none";
+  document.getElementById("resultBox").style.display = "block";
+
+  const pct = Math.round((score / currentPool.length) * 100);
+  document.getElementById("finalPercent").textContent = `${pct}%`;
+  document.getElementById("finalFraction").textContent = `${score} von ${currentPool.length} richtig`;
+
+  const retryWrongBtn = document.getElementById("retryWrongBtn");
+  if (wrongQuestions.length > 0) {
+    retryWrongBtn.style.display = "inline-block";
+    retryWrongBtn.textContent = `Falsche Fragen wiederholen (${wrongQuestions.length})`;
+  } else {
+    retryWrongBtn.style.display = "none";
+  }
+
+  let title = "Super gemacht!";
+  let text = "Du beherrschst alle Inhalte der Vorlesung „Einführung Knochen“ inklusive der Mehrfachauswahl-Fragen.";
+  if (pct < 50) {
+    title = "Guter Start!";
+    text = "Nutze die Themen-Filter oben oder wiederhole gezielt die falschen Fragen.";
+  } else if (pct < 85) {
+    title = "Schon sehr stark!";
+    text = "Die wichtigsten Konzepte sitzen – gehe jetzt noch die restlichen Detailfragen durch.";
+  }
+  document.getElementById("resultTitle").textContent = title;
+  document.getElementById("resultText").textContent = text;
+}
+
+initFilters();
+restartQuiz(false);
+</script>
+</body>
+</html>
